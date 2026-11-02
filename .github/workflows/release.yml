@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      test_tag:
+        description: 'Manual test tag. Must use the test-* namespace, for example test-2026-03-16-1.'
+        required: true
+        type: string
+      release_mode:
+        description: 'Manual test release mode. Only prerelease is allowed.'
+        required: true
+        default: 'prerelease'
+        type: choice
+        options:
+          - prerelease
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run PHPStan
+        run: composer run stan
+
+      - name: Run unit tests
+        run: composer run test
+
+      - name: Validate manual test tag format
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG_NAME: ${{ inputs.test_tag }}
+        run: |
+          set -euo pipefail
+
+          if ! [[ "$TAG_NAME" =~ ^test- ]]; then
+            echo "Manual test tag '$TAG_NAME' must start with 'test-'"
+            exit 1
+          fi
+
+      - name: Validate production tag format
+        if: github.event_name == 'push'
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if ! [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '$TAG_NAME' must match vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
+      - name: Publish GitHub release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG_NAME" > /dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists (created outside this workflow); skipping creation."
+            exit 0
+          fi
+
+          gh release create "$TAG_NAME" \
+            --verify-tag \
+            --title "$TAG_NAME" \
+            --generate-notes
+
+      # Releases created with the workflow token do not trigger other workflows,
+      # so Packagist is notified here instead of relying on packagist-sync.yml.
+      - name: Notify Packagist
+        if: github.event_name == 'push'
+        env:
+          EVENT_NAME: release
+          SYNC_MODE: live
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: ./scripts/sync-packagist.sh
+
+      - name: Create GitHub prerelease (manual test)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.test_tag }}
+          TARGET_COMMITISH: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          gh release create "$TAG_NAME" \
+            --target "$TARGET_COMMITISH" \
+            --title "$TAG_NAME" \
+            --generate-notes \
+            --prerelease

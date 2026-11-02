@@ -1,0 +1,9 @@
+parameters:
+  level: 7
+  paths:
+    - src
+    - tests
+  ignoreErrors:
+    # Statamic's contracts do not declare every method the concrete classes have.
+    - identifier: method.notFound
+      message: '#Call to an undefined method Statamic\\Contracts\\#'

@@ -1,0 +1,43 @@
+name: Packagist Sync
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      sync_mode:
+        description: 'Use dry-run to inspect the Packagist request without sending it.'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+          - live
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Simulate Packagist sync (dry-run)
+        if: github.event_name == 'workflow_dispatch' && inputs.sync_mode == 'dry-run'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SYNC_MODE: ${{ inputs.sync_mode }}
+        run: ./scripts/sync-packagist.sh
+
+      - name: Notify Packagist
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.sync_mode == 'live')
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SYNC_MODE: ${{ github.event_name == 'release' && 'live' || inputs.sync_mode }}
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: ./scripts/sync-packagist.sh

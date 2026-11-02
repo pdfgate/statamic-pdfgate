@@ -1,0 +1,75 @@
+{
+  "name": "pdfgate/statamic",
+  "description": "Statamic addon for the PDFGate API: export entries and pages as PDF, and compress, watermark or protect PDF assets from the Control Panel.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "statamic",
+    "statamic-addon",
+    "pdf",
+    "pdfgate",
+    "html-to-pdf",
+    "laravel"
+  ],
+  "homepage": "https://pdfgate.com/api/html-to-pdf",
+  "support": {
+    "docs": "https://pdfgate.com/documentation",
+    "issues": "https://github.com/pdfgate/statamic-pdfgate/issues",
+    "source": "https://github.com/pdfgate/statamic-pdfgate"
+  },
+  "authors": [
+    {
+      "name": "PDFGate",
+      "homepage": "https://pdfgate.com"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "pdfgate/laravel": "^1.0",
+    "statamic/cms": "^5.0 || ^6.0"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^10.0 || ^11.0",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^11.0 || ^12.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "PdfGate\\Statamic\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "PdfGate\\Statamic\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "statamic": {
+      "name": "PDFGate",
+      "slug": "pdfgate-statamic",
+      "description": "Export entries as PDF and compress, watermark or protect PDF assets with the PDFGate API.",
+      "url": "https://pdfgate.com/api/html-to-pdf",
+      "developer": "PDFGate",
+      "developer-url": "https://pdfgate.com"
+    },
+    "laravel": {
+      "providers": [
+        "PdfGate\\Statamic\\ServiceProvider"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "stan": "phpstan analyse --memory-limit=512M",
+    "check": [
+      "composer validate --strict",
+      "@stan",
+      "@test"
+    ]
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
