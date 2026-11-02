@@ -2,10 +2,6 @@
 
 Export entries as PDF and compress, watermark or protect PDF assets without leaving the Statamic Control Panel, powered by the [PDFGate PDF API](https://pdfgate.com/api).
 
-[![CI](https://github.com/pdfgate/statamic-pdfgate/actions/workflows/ci.yml/badge.svg)](https://github.com/pdfgate/statamic-pdfgate/actions/workflows/ci.yml)
-[![Latest Version](https://img.shields.io/packagist/v/pdfgate/statamic.svg)](https://packagist.org/packages/pdfgate/statamic)
-[![License](https://img.shields.io/packagist/l/pdfgate/statamic.svg)](LICENSE)
-
 Editors get four new actions in the places they already work, and templates get one tag:
 
 - **Export as PDF** in every collection. Pick an entry and download it as a PDF, or pick several and download a zip.
