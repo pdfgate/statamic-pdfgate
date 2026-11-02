@@ -67,4 +67,14 @@ final class DownloadRouteTest extends TestCase
 
         $this->get(URL::signedRoute('pdfgate.entries.pdf', ['entry' => $draft->id()]))->assertNotFound();
     }
+
+    public function testApiFailuresBecomeAGatewayError(): void
+    {
+        $entry = $this->makeEntry('about');
+        $this->transport->queueJson(['statusCode' => 400, 'message' => 'url: The URL is invalid.'], 400);
+
+        $response = $this->get(URL::signedRoute('pdfgate.entries.pdf', ['entry' => $entry->id()]));
+
+        $response->assertStatus(502);
+    }
 }

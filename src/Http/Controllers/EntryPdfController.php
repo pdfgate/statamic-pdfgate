@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PdfGate\Statamic\Http\Controllers;
 
 use Illuminate\Http\Request;
+use PdfGate\Exception\PdfGateException;
+use PdfGate\Statamic\ApiErrorMessage;
 use PdfGate\Statamic\EntryPdfGenerator;
 use Statamic\Facades\Entry;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -26,6 +28,11 @@ final class EntryPdfController
             abort(404);
         }
 
-        return $this->generator->download($found, $request);
+        try {
+            return $this->generator->download($found, $request);
+        } catch (PdfGateException $exception) {
+            // The upstream render failed; report it as a gateway error with PDFGate's message instead of a stack trace.
+            abort(502, ApiErrorMessage::from($exception));
+        }
     }
 }

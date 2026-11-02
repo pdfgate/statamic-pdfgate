@@ -38,7 +38,7 @@ The actions appear in the Control Panel as soon as the key is set, for users who
 
 Open a collection, pick an entry and choose **Export as PDF** from its action menu. The browser downloads `{slug}.pdf`. Select several entries in the listing to download `entries.zip` with one PDF per entry. The action is available in the list view and in the tree view of structured collections.
 
-By default PDFGate loads the entry's public URL and renders it exactly as a visitor would see it, with your layout, stylesheets and fonts. The page must be reachable from the internet and the entry must be published. Drafts do not show the action in this mode.
+By default PDFGate loads the entry's public URL and renders it exactly as a visitor would see it, with your layout, stylesheets and fonts. The page must be reachable from the internet and the entry must be published. Drafts do not show the action in this mode. If the PDF comes back without styles, check that the stylesheet links use the same scheme as the page. A site served over https behind a proxy or load balancer needs Laravel's trusted proxies set, otherwise it writes http links that the renderer drops as mixed content.
 
 For sites that are not public, such as a staging server or a site behind a login, or to export drafts, switch to HTML mode. Statamic renders the entry's template and sends the HTML to PDFGate instead. Stylesheets, fonts and images are still loaded from your `APP_URL`, so they need to be public for the PDF to look like the page.
 
