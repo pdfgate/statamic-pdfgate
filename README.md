@@ -18,21 +18,27 @@ Rendering and processing happen on PDFGate's servers. Your site needs no headles
 - PHP 8.2 or newer with `ext-curl` and `ext-json`
 - A [PDFGate](https://pdfgate.com) account and API key
 
-## Installation
+## Quick start
 
-```bash
-composer require pdfgate/statamic
-```
+1. Install the addon:
 
-Create an API key in the [PDFGate dashboard](https://dashboard.pdfgate.com) and add it to your site's `.env`:
+   ```bash
+   composer require pdfgate/statamic
+   ```
 
-```dotenv
-PDFGATE_API_KEY=live_your_api_key
-```
+2. Create an API key in the [PDFGate dashboard](https://dashboard.pdfgate.com) and add it to your site's `.env`:
 
-Keys that start with `live_` call the production API, keys that start with `test_` call the sandbox API. Sandbox requests are meant for testing and are not charged on a paid PDFGate plan.
+   ```dotenv
+   PDFGATE_API_KEY=live_your_api_key
+   ```
 
-The actions appear in the Control Panel as soon as the key is set, for users who can view entries and edit assets. No further setup is needed.
+   Keys that start with `live_` call the production API, keys that start with `test_` call the sandbox API. Sandbox requests are meant for testing and are not charged on a paid PDFGate plan.
+
+3. Open a collection in the Control Panel, pick a published entry and choose **Export as PDF** from its action menu. The PDF downloads.
+
+4. Open an asset container, pick a PDF and choose **Compress PDF**. Keep "Replace the original file" and run it. The file size drops in the listing.
+
+That is the whole setup. The actions appear for users who can view entries and edit assets, and the sections below explain each one and the options you can change.
 
 ## Export entries as PDF
 
