@@ -30,7 +30,7 @@ final class ServiceProviderTest extends TestCase
 
     public function testActionsAreRegisteredForEntriesAndPdfAssets(): void
     {
-        $this->actingAs(User::make()->makeSuper());
+        $this->actingAs(User::make()->id('test-user')->email('test@example.com')->makeSuper());
 
         $entryActions = Actions::for($this->makeEntry(), ['view' => 'list'])->map(fn (Action $action) => $action::class)->all();
         $this->assertContains(ExportEntryAsPdf::class, $entryActions);
@@ -43,7 +43,7 @@ final class ServiceProviderTest extends TestCase
 
     public function testAssetActionsAreHiddenForOtherFileTypes(): void
     {
-        $this->actingAs(User::make()->makeSuper());
+        $this->actingAs(User::make()->id('test-user')->email('test@example.com')->makeSuper());
 
         $this->makePdfAsset();
         \Illuminate\Support\Facades\Storage::disk('assets')->put('docs/photo.jpg', 'not a pdf');
@@ -59,7 +59,7 @@ final class ServiceProviderTest extends TestCase
 
     public function testActionsAreHiddenWithoutAnApiKey(): void
     {
-        $this->actingAs(User::make()->makeSuper());
+        $this->actingAs(User::make()->id('test-user')->email('test@example.com')->makeSuper());
         config()->set('pdfgate.api_key', null);
 
         $entryActions = Actions::for($this->makeEntry(), ['view' => 'list'])->map(fn (Action $action) => $action::class)->all();
