@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace PdfGate\Statamic;
 
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Http\Request;
 use PdfGate\Laravel\PdfGateManager;
+use Statamic\Auth\Protect\Protection;
 use Statamic\Contracts\Entries\Entry;
+use Statamic\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -17,12 +20,13 @@ final class EntryPdfGenerator
 {
     public function __construct(
         private readonly PdfGateManager $pdfGate,
-        private readonly Config $config
+        private readonly Config $config,
+        private readonly Cache $cache
     ) {
     }
 
     /**
-     * Whether the entry can be exported with the configured source.
+     * Whether an editor can export the entry from the Control Panel.
      *
      * URL rendering needs a public URL and a published entry. HTML rendering
      * only needs a template, so drafts work too.
@@ -34,6 +38,16 @@ final class EntryPdfGenerator
         }
 
         return $this->source() === 'html' || $entry->status() === 'published';
+    }
+
+    /**
+     * Whether the entry may be served to visitors through the download route.
+     *
+     * Drafts are never public, whichever source is configured.
+     */
+    public function canServePublicly(Entry $entry): bool
+    {
+        return $entry->status() === 'published' && $this->canExport($entry);
     }
 
     /**
@@ -61,13 +75,10 @@ final class EntryPdfGenerator
      */
     public function buildRequest(Entry $entry, ?Request $request = null): array
     {
-        $options = $this->config->get('pdfgate-statamic.entries.options', []);
-        $payload = is_array($options) ? $options : [];
-
-        unset($payload['url'], $payload['html']);
+        $payload = $this->options();
 
         if ($this->source() === 'html') {
-            $payload['html'] = $this->renderHtml($entry, $request ?? request());
+            $payload['html'] = $this->renderHtml($entry);
         } else {
             $payload['url'] = (string) $entry->absoluteUrl();
         }
@@ -92,6 +103,55 @@ final class EntryPdfGenerator
             $this->filename($entry),
             ['Content-Type' => 'application/pdf']
         );
+    }
+
+    /**
+     * Generates the PDF and returns its bytes.
+     */
+    public function bytes(Entry $entry, ?Request $request = null): string
+    {
+        $documentId = $this->generate($entry, $request);
+        $stream = $this->stream($documentId);
+
+        try {
+            $bytes = (string) stream_get_contents($stream);
+        } finally {
+            fclose($stream);
+        }
+
+        $this->cleanup($documentId);
+
+        return $bytes;
+    }
+
+    /**
+     * Like bytes(), but reuses a recent render of the same entry.
+     *
+     * Visitors clicking a download link on a popular page would otherwise spend
+     * one PDFGate conversion each. The cache key changes when the entry is saved
+     * or the render options change, and entries.cache_minutes sets the lifetime.
+     *
+     * Only URL renders are shared. PDFGate loads the page as an anonymous visitor,
+     * so the result is the same for everyone. HTML renders happen inside the
+     * visitor's own request, with their session and user, and are never cached.
+     * Protected entries are not cached either, matching Statamic's own rule.
+     */
+    public function cachedBytes(Entry $entry, ?Request $request = null): string
+    {
+        $minutes = (int) $this->config->get('pdfgate-statamic.entries.cache_minutes', 60);
+
+        if ($minutes <= 0 || $this->source() === 'html' || app(Protection::class)->setData($entry)->scheme() !== null) {
+            return $this->bytes($entry, $request);
+        }
+
+        $key = 'pdfgate-statamic:entry:' . sha1((string) json_encode([
+            $entry->id(),
+            $entry->lastModified()?->getTimestamp(),
+            $this->source(),
+            $this->options(),
+        ]));
+
+        return $this->cache->remember($key, $minutes * 60, fn (): string => $this->bytes($entry, $request));
     }
 
     /**
@@ -128,11 +188,31 @@ final class EntryPdfGenerator
     }
 
     /**
-     * Renders the entry's template and points relative URLs at the site.
+     * @return array<string,mixed>
      */
-    private function renderHtml(Entry $entry, Request $request): string
+    private function options(): array
     {
-        $html = (string) $entry->toResponse($request)->getContent();
+        $options = $this->config->get('pdfgate-statamic.entries.options', []);
+        $payload = is_array($options) ? $options : [];
+
+        unset($payload['url'], $payload['html']);
+
+        return $payload;
+    }
+
+    /**
+     * Renders the entry's template and layout and points relative URLs at the site.
+     *
+     * The view is rendered directly rather than through the entry's HTTP response,
+     * which refuses drafts outside Live Preview.
+     */
+    private function renderHtml(Entry $entry): string
+    {
+        $html = app(View::class)
+            ->template($entry->template())
+            ->layout($entry->layout())
+            ->cascadeContent($entry)
+            ->render();
 
         if (preg_match('/<base\s/i', $html) === 1) {
             return $html;

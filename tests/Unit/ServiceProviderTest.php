@@ -68,4 +68,33 @@ final class ServiceProviderTest extends TestCase
         $this->assertNotContains(ExportEntryAsPdf::class, $entryActions);
         $this->assertNotContains(CompressPdf::class, $assetActions);
     }
+
+    public function testAssetActionsNeedEditAndUploadPermissions(): void
+    {
+        $asset = $this->makePdfAsset();
+
+        $this->actingAsUserWith(['access cp', 'view assets assets', 'edit assets assets']);
+        $editOnly = Actions::for($asset, ['view' => 'list'])->map(fn (Action $action) => $action::class)->all();
+        $this->assertNotContains(CompressPdf::class, $editOnly);
+        $this->assertNotContains(WatermarkPdf::class, $editOnly);
+        $this->assertNotContains(ProtectPdf::class, $editOnly);
+
+        $this->actingAsUserWith(['access cp', 'view assets assets', 'edit assets assets', 'upload assets assets']);
+        $editAndUpload = Actions::for($asset, ['view' => 'list'])->map(fn (Action $action) => $action::class)->all();
+        $this->assertContains(CompressPdf::class, $editAndUpload);
+        $this->assertContains(WatermarkPdf::class, $editAndUpload);
+        $this->assertContains(ProtectPdf::class, $editAndUpload);
+    }
+
+    public function testActionsAreHiddenForAKeyWithoutAKnownPrefix(): void
+    {
+        $this->actingAs(User::make()->id('test-user')->email('test@example.com')->makeSuper());
+        config()->set('pdfgate.api_key', 'not-a-pdfgate-key');
+
+        $entryActions = Actions::for($this->makeEntry(), ['view' => 'list'])->map(fn (Action $action) => $action::class)->all();
+        $assetActions = Actions::for($this->makePdfAsset(), ['view' => 'list'])->map(fn (Action $action) => $action::class)->all();
+
+        $this->assertNotContains(ExportEntryAsPdf::class, $entryActions);
+        $this->assertNotContains(CompressPdf::class, $assetActions);
+    }
 }

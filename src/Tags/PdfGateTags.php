@@ -6,6 +6,7 @@ namespace PdfGate\Statamic\Tags;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
+use PdfGate\Statamic\ApiKey;
 use Statamic\Tags\Tags;
 
 /**
@@ -27,14 +28,14 @@ final class PdfGateTags extends Tags
     /**
      * Signed URL of the PDF download route for an entry.
      *
-     * Parameters: "entry" (ID, defaults to the current entry).
+     * Parameters: "entry" (ID, defaults to the current entry). Prints nothing when no usable API key is set.
      */
     public function downloadUrl(): ?string
     {
         $id = $this->params->get('entry') ?? $this->context->value('id');
         $id = is_scalar($id) ? trim((string) $id) : '';
 
-        if ($id === '' || !Route::has('pdfgate.entries.pdf')) {
+        if ($id === '' || !ApiKey::isUsable() || !Route::has('pdfgate.entries.pdf')) {
             return null;
         }
 
