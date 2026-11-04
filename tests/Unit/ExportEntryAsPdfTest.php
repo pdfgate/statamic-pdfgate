@@ -112,4 +112,36 @@ final class ExportEntryAsPdfTest extends TestCase
         $this->assertStringContainsString('two.pdf', $zip);
         $this->assertCount(6, $this->transport->requests);
     }
+
+    public function testHtmlModeRendersTheTemplateWithABaseTag(): void
+    {
+        config()->set('pdfgate-statamic.entries.source', 'html');
+        config()->set('app.url', 'https://example.test');
+        $entry = $this->makeEntry('about');
+
+        $request = $this->app->make(EntryPdfGenerator::class)->buildRequest($entry);
+
+        $this->assertArrayNotHasKey('url', $request);
+        $this->assertStringContainsString('<h1>About</h1>', $request['html']);
+        $this->assertStringContainsString('<head><base href="https://example.test/">', $request['html']);
+    }
+
+    public function testHtmlModeExportsADraft(): void
+    {
+        config()->set('pdfgate-statamic.entries.source', 'html');
+        $draft = $this->makeEntry('draft', false);
+        $this->queueDocument('doc_1');
+        $this->queueFile();
+        $this->queueNoContent();
+
+        $response = (new ExportEntryAsPdf())->download(collect([$draft]), []);
+        ob_start();
+        $response->sendContent();
+        $body = (string) ob_get_clean();
+
+        $this->assertSame(self::PDF, $body);
+        $html = $this->transport->requests[0]->getJsonBody()['html'] ?? '';
+        $this->assertStringContainsString('<h1>Draft</h1>', $html);
+        $this->assertStringContainsString('Status: draft', $html);
+    }
 }

@@ -7,6 +7,7 @@ namespace PdfGate\Statamic\Actions;
 use Illuminate\Validation\ValidationException;
 use PdfGate\Exception\PdfGateException;
 use PdfGate\Statamic\ApiErrorMessage;
+use PdfGate\Statamic\ApiKey;
 use PdfGate\Statamic\EntryPdfGenerator;
 use PdfGate\Statamic\Text;
 use Statamic\Actions\Action;
@@ -37,7 +38,7 @@ final class ExportEntryAsPdf extends Action
      */
     public function visibleTo($item): bool
     {
-        return $item instanceof Entry && $this->apiKeyIsConfigured() && $this->generator()->canExport($item);
+        return $item instanceof Entry && ApiKey::isUsable() && $this->generator()->canExport($item);
     }
 
     /**
@@ -97,16 +98,6 @@ final class ExportEntryAsPdf extends Action
                 return $candidate;
             }
         }
-    }
-
-    /**
-     * Without a key the client cannot be built, so the action stays out of the menu instead of breaking the listing.
-     */
-    private function apiKeyIsConfigured(): bool
-    {
-        $key = config('pdfgate.api_key');
-
-        return is_string($key) && trim($key) !== '';
     }
 
     private function generator(): EntryPdfGenerator

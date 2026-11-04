@@ -20,7 +20,12 @@ return [
     |
     | "download_route" registers GET /pdfgate/entries/{id}, used by the
     | {{ pdfgate:download_url }} tag. Links are signed, so only URLs created
-    | by the tag work. "throttle" limits requests per minute per IP.
+    | by the tag work, and drafts are never served. "throttle" limits requests
+    | per minute per IP. "cache_minutes" keeps a rendered PDF and serves it
+    | again to other visitors for that long, so a popular page does not spend
+    | one PDFGate conversion per click; 0 renders on every request. Only url
+    | renders are cached: html renders run inside the visitor's request and
+    | may contain their data, and protected entries are never cached.
     |
     */
 
@@ -32,6 +37,7 @@ return [
         ],
         'download_route' => true,
         'throttle' => 10,
+        'cache_minutes' => 60,
     ],
 
     /*

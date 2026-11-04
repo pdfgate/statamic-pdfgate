@@ -8,6 +8,7 @@ use Illuminate\Validation\ValidationException;
 use PdfGate\Dto\PdfGateDocumentMetadata;
 use PdfGate\Exception\PdfGateException;
 use PdfGate\Statamic\ApiErrorMessage;
+use PdfGate\Statamic\ApiKey;
 use PdfGate\Statamic\AssetProcessor;
 use PdfGate\Statamic\Text;
 use Statamic\Actions\Action;
@@ -23,10 +24,8 @@ abstract class PdfAssetAction extends Action
      */
     public function visibleTo($item): bool
     {
-        $key = config('pdfgate.api_key');
-
         return $item instanceof Asset
-            && is_string($key) && trim($key) !== ''
+            && ApiKey::isUsable()
             && strtolower($item->extension()) === 'pdf';
     }
 
@@ -36,7 +35,9 @@ abstract class PdfAssetAction extends Action
      */
     public function authorize($user, $item): bool
     {
-        return $user->can('edit', $item);
+        // Both result modes write a file into the container, so the user needs
+        // the same rights as for Statamic's own Reupload action: edit and upload.
+        return $user->can('reupload', $item);
     }
 
     public function buttonText(): string
